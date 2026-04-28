@@ -1,0 +1,15 @@
+{
+  "$schema": "https://apify.com/schemas/v1/actor.ide.json",
+  "actorSpecification": 1,
+  "name": "docs-mcp-server-starter",
+  "title": "Docs MCP Server Starter",
+  "description": "Persistent MCP server that gives AI assistants direct, queryable access to technical documentation. Ships with templates for Next.js, Tailwind, React, TypeScript, and Prisma. Fork it for any docs site.",
+  "input": "./input_schema.json",
+  "version": "0.1",
+  "buildTag": "latest",
+  "meta": {
+    "templateId": "ts-empty",
+    "generatedBy": "Claude Code with Claude Sonnet 4.6"
+  },
+  "dockerfile": "../Dockerfile"
+}

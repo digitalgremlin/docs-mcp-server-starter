@@ -1,0 +1,54 @@
+{
+  "title": "Docs MCP Server Starter",
+  "description": "Configure which documentation sources the MCP server indexes and serves.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "sources": {
+      "title": "Documentation sources",
+      "type": "array",
+      "description": "List of documentation sources to index. Use a template ID for curated sources (nextjs, tailwind, react, typescript, prisma), or provide url + contentSelector for any custom site.",
+      "minItems": 1,
+      "maxItems": 10,
+      "editor": "json",
+      "prefill": [{ "name": "Next.js Docs", "template": "nextjs" }],
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "template": { "type": "string" },
+          "url": { "type": "string" },
+          "sitemapUrl": { "type": "string" },
+          "contentSelector": { "type": "string" }
+        }
+      }
+    },
+    "maxPagesPerSource": {
+      "title": "Max pages per source",
+      "type": "integer",
+      "description": "Maximum pages to index per source. Pages beyond this cap are not indexed.",
+      "minimum": 1,
+      "maximum": 500,
+      "default": 200,
+      "editor": "number"
+    },
+    "cacheMaxPages": {
+      "title": "Cache max pages",
+      "type": "integer",
+      "description": "Maximum pages to hold in memory. Oldest-fetched pages are evicted when exceeded.",
+      "minimum": 1,
+      "maximum": 200,
+      "default": 50,
+      "editor": "number"
+    },
+    "markdownOutput": {
+      "title": "Markdown output",
+      "type": "boolean",
+      "description": "Convert fetched page content to markdown. Disable for raw plain text.",
+      "default": true,
+      "editor": "checkbox"
+    }
+  },
+  "required": ["sources"]
+}

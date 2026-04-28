@@ -1,0 +1,31 @@
+{
+  "name": "docs-mcp-server-starter",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Persistent MCP server giving AI assistants direct, queryable access to technical documentation from configurable sources.",
+  "engines": { "node": ">=18.0.0" },
+  "dependencies": {
+    "apify": "^3.7.0",
+    "cheerio": "^1.0.0",
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "@apify/eslint-config": "^1.0.0",
+    "@apify/tsconfig": "^0.1.1",
+    "@types/node": "^24.0.0",
+    "@types/turndown": "^5.0.5",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "scripts": {
+    "start": "npm run start:dev",
+    "start:prod": "node dist/main.js",
+    "start:dev": "tsx src/main.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "lint:types": "tsc --noEmit"
+  },
+  "author": "It's not you it's me",
+  "license": "ISC"
+}
