@@ -3,13 +3,15 @@
   "actorSpecification": 1,
   "name": "docs-mcp-server-starter",
   "title": "Docs MCP Server Starter",
-  "description": "Persistent MCP server that gives AI assistants direct, queryable access to technical documentation. Ships with templates for Next.js, Tailwind, React, TypeScript, and Prisma. Fork it for any docs site.",
+  "description": "Persistent MCP server that gives Claude, Cursor, and any MCP-compatible AI assistant queryable access to technical documentation. Indexes any docs site, exposes search and fetch tools over JSON-RPC, and caches pages for fast follow-up queries. Ships with templates for Next.js, Tailwind CSS, React, TypeScript, and Prisma — or fork for any docs site with a URL and a CSS selector.",
   "input": "./input_schema.json",
-  "version": "0.1",
+  "version": "0.1.0",
   "buildTag": "latest",
   "meta": {
     "templateId": "ts-empty",
     "generatedBy": "Claude Code with Claude Sonnet 4.6"
   },
-  "dockerfile": "../Dockerfile"
+  "dockerfile": "../Dockerfile",
+  "categories": ["AI_GPT_AND_LLMS", "DEVELOPER_TOOLS"],
+  "tags": ["mcp", "mcp-server", "model-context-protocol", "documentation", "ai-agent", "claude", "developer-tools", "standby"]
 }

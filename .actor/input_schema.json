@@ -1,13 +1,13 @@
 {
   "title": "Docs MCP Server Starter",
-  "description": "Configure which documentation sources the MCP server indexes and serves.",
+  "description": "Configure which documentation sources this MCP server indexes and serves to AI assistants.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "sources": {
       "title": "Documentation sources",
       "type": "array",
-      "description": "List of documentation sources to index. Use a template ID for curated sources (nextjs, tailwind, react, typescript, prisma), or provide url + contentSelector for any custom site.",
+      "description": "Documentation sources to index on startup. Use a curated template ID (nextjs, tailwind, react, typescript, prisma) or provide a custom url + contentSelector for any docs site. Each source needs a unique name.",
       "minItems": 1,
       "maxItems": 10,
       "editor": "json",
@@ -16,18 +16,38 @@
         "type": "object",
         "required": ["name"],
         "properties": {
-          "name": { "type": "string" },
-          "template": { "type": "string" },
-          "url": { "type": "string" },
-          "sitemapUrl": { "type": "string" },
-          "contentSelector": { "type": "string" }
+          "name": {
+            "title": "Source name",
+            "type": "string",
+            "description": "Unique label for this source (e.g., \"Next.js Docs\"). Used as the lookup key in MCP tool calls."
+          },
+          "template": {
+            "title": "Template ID",
+            "type": "string",
+            "description": "Curated template ID: nextjs, tailwind, react, typescript, or prisma. Use this OR url + contentSelector."
+          },
+          "url": {
+            "title": "Custom URL",
+            "type": "string",
+            "description": "Entry URL for a custom docs site (e.g., https://docs.example.com). Required if no template is set."
+          },
+          "sitemapUrl": {
+            "title": "Sitemap URL",
+            "type": "string",
+            "description": "Optional explicit sitemap.xml URL. Leave blank to auto-discover from the entry URL."
+          },
+          "contentSelector": {
+            "title": "Content CSS selector",
+            "type": "string",
+            "description": "CSS selector for the main content area on each page (e.g., \"article\", \"#content\", \"main article\"). Required for custom URLs."
+          }
         }
       }
     },
     "maxPagesPerSource": {
       "title": "Max pages per source",
       "type": "integer",
-      "description": "Maximum pages to index per source. Pages beyond this cap are not indexed.",
+      "description": "Cap on how many pages each source can index at startup. Lower this to speed up boot for large docs sites; raise it for fuller coverage.",
       "minimum": 1,
       "maximum": 500,
       "default": 200,
@@ -36,7 +56,7 @@
     "cacheMaxPages": {
       "title": "Cache max pages",
       "type": "integer",
-      "description": "Maximum pages to hold in memory. Oldest-fetched pages are evicted when exceeded.",
+      "description": "How many fetched pages to hold in the LRU cache. Cached pages return instantly and become searchable by content; uncached pages match only on title.",
       "minimum": 1,
       "maximum": 200,
       "default": 50,
@@ -45,7 +65,7 @@
     "markdownOutput": {
       "title": "Markdown output",
       "type": "boolean",
-      "description": "Convert fetched page content to markdown. Disable for raw plain text.",
+      "description": "Convert extracted page HTML to clean markdown. Turn off to return raw text instead.",
       "default": true,
       "editor": "checkbox"
     }

@@ -2,7 +2,7 @@
   "name": "docs-mcp-server-starter",
   "version": "0.1.0",
   "type": "module",
-  "description": "Persistent MCP server giving AI assistants direct, queryable access to technical documentation from configurable sources.",
+  "description": "Persistent MCP server that gives Claude, Cursor, and any MCP-compatible AI assistant queryable access to technical documentation. Ships with templates for Next.js, Tailwind CSS, React, TypeScript, and Prisma.",
   "engines": { "node": ">=18.0.0" },
   "dependencies": {
     "apify": "^3.7.0",
@@ -26,6 +26,6 @@
     "test": "vitest run",
     "lint:types": "tsc --noEmit"
   },
-  "author": "It's not you it's me",
-  "license": "ISC"
+  "author": "Joe Slade",
+  "license": "Apache-2.0"
 }
