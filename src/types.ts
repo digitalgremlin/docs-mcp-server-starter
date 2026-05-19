@@ -7,11 +7,14 @@ export interface SourceConfig {
 }
 
 export interface ActorInput {
-  sources: SourceConfig[];
+  sources?: SourceConfig[];
   maxPagesPerSource?: number;
   cacheMaxPages?: number;
   markdownOutput?: boolean;
 }
+
+// Alias used in MCP tool arguments for inline on-demand source definitions
+export type SourceDef = SourceConfig;
 
 export interface PageEntry {
   title: string;

@@ -36,10 +36,12 @@ describe('pipeline integration', () => {
     expect(source.pages[0].title).toBe('Getting Started');
 
     const state: ServerState = {
-      sources: [source],
+      sources: new Map([[source.name, source]]),
       cache: new LruCache<string, CachedPage>(50),
       fetchFn: fixtureFetch,
       markdownOutput: true,
+      maxPagesPerSource: 200,
+      buildLocks: new Map(),
     };
 
     const tocR = await handleMcpRequest(req(1, 'tools/call', { name: 'get_toc', arguments: { source: 'Test Docs' } }), state);
@@ -55,10 +57,12 @@ describe('pipeline integration', () => {
       200,
     );
     const state: ServerState = {
-      sources: [source],
+      sources: new Map([[source.name, source]]),
       cache: new LruCache<string, CachedPage>(50),
       fetchFn: fixtureFetch,
       markdownOutput: true,
+      maxPagesPerSource: 200,
+      buildLocks: new Map(),
     };
 
     const r = await handleMcpRequest(req(1, 'tools/call', { name: 'get_page', arguments: { url: PAGE_URL } }), state);
@@ -80,10 +84,12 @@ describe('pipeline integration', () => {
       200,
     );
     const state: ServerState = {
-      sources: [source],
+      sources: new Map([[source.name, source]]),
       cache: new LruCache<string, CachedPage>(50),
       fetchFn: fixtureFetch,
       markdownOutput: true,
+      maxPagesPerSource: 200,
+      buildLocks: new Map(),
     };
 
     await handleMcpRequest(req(1, 'tools/call', { name: 'get_page', arguments: { url: PAGE_URL } }), state);
@@ -100,10 +106,12 @@ describe('pipeline integration', () => {
       200,
     );
     const state: ServerState = {
-      sources: [source],
+      sources: new Map([[source.name, source]]),
       cache: new LruCache<string, CachedPage>(50),
       fetchFn: fixtureFetch,
       markdownOutput: true,
+      maxPagesPerSource: 200,
+      buildLocks: new Map(),
     };
 
     const r = await handleMcpRequest(req(1, 'tools/call', { name: 'search_docs', arguments: { query: 'getting' } }), state);
@@ -111,5 +119,48 @@ describe('pipeline integration', () => {
     expect(result.results.length).toBeGreaterThan(0);
     expect(result.results[0].matchType).toBe('title');
     expect(result.results[0].url).toBe(PAGE_URL);
+  });
+});
+
+// ─── Boundary 3: Standby boot with no sources ────────────────────────────────
+//
+// Fails today because:
+//   - ServerState has no buildLocks or maxPagesPerSource fields (TypeScript error in
+//     lint mode; runtime: the Map-based sources causes state.sources.map() to throw
+//     inside the list_sources dispatch branch).
+//   - validateInput() in main.ts throws "Input must include at least one source."
+//     when given null/empty input, so the actor exits before the HTTP server starts.
+//
+// After the v0.2 refactor both assertions must pass with no errors or process exits.
+
+describe('boundary 3 — standby boot with no sources', () => {
+  it('actor boots cold with empty sources: list_sources returns [] and get_toc returns a typed error — no crash', async () => {
+    // Represents the ServerState produced after a Standby boot with no INPUT.json.
+    // Cast bypasses the current (stale) ServerState type so the test can express
+    // the intended v0.2 contract today and fail at runtime, not at the type level.
+    const state: ServerState = {
+      sources: new Map(),
+      cache: new LruCache<string, CachedPage>(50),
+      fetchFn: async () => ({ html: '', ok: false, status: 500 }),
+      markdownOutput: true,
+      maxPagesPerSource: 200,
+      buildLocks: new Map(),
+    };
+
+    // list_sources on an empty-boot actor must return an empty array, not throw
+    const listR = await handleMcpRequest(
+      req(1, 'tools/call', { name: 'list_sources', arguments: {} }),
+      state,
+    );
+    expect(toolResult(listR).sources).toEqual([]);
+
+    // get_toc for an unknown source with no sourceDef must return a typed error,
+    // not a server crash or an unhandled rejection
+    const tocR = await handleMcpRequest(
+      req(2, 'tools/call', { name: 'get_toc', arguments: { source: 'Any Docs' } }),
+      state,
+    );
+    expect(toolResult(tocR).error).toMatch(/not indexed/i);
+    expect(toolResult(tocR).error).toMatch(/sourceDef/i);
   });
 });
