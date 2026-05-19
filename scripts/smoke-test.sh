@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Local Standby smoke test for the Docs MCP Server Starter.
-# Boots the actor, waits for the MCP server, calls all four tools,
-# prints results, then shuts down cleanly.
+# Boots the actor with NO boot-time INPUT (Standby-native), waits for the MCP
+# server, calls all four tools using sourceDef for on-demand indexing, then
+# verifies cache hit on the second get_page call. Shuts down cleanly.
 #
 # Usage: ./scripts/smoke-test.sh
 # Requires: apify-cli, jq (optional — falls back to raw output if missing)
@@ -39,9 +40,25 @@ call_mcp() {
     -d "$payload" | pretty
 }
 
+timed_call_mcp() {
+  local label="$1" payload="$2"
+  echo
+  echo "── $label ──"
+  local start end elapsed
+  start=$(date +%s%3N)
+  local response
+  response=$(curl -sS -X POST "http://localhost:${PORT}" \
+    -H 'Content-Type: application/json' \
+    -d "$payload")
+  end=$(date +%s%3N)
+  elapsed=$(( end - start ))
+  echo "$response" | pretty
+  echo "[smoke-test] Response time: ${elapsed}ms"
+}
+
 cd "$(dirname "$0")/.."
 
-echo "[smoke-test] Booting actor (logs → $LOG_FILE)..."
+echo "[smoke-test] Booting actor with no INPUT.json (Standby-native boot)..."
 apify run --purge >"$LOG_FILE" 2>&1 &
 ACTOR_PID=$!
 
@@ -65,45 +82,100 @@ if ! grep -q 'MCP server listening' "$LOG_FILE"; then
   exit 1
 fi
 
+# Confirm Standby boot log message (no pre-seeded sources)
+if grep -q 'No boot-time sources' "$LOG_FILE"; then
+  echo "[smoke-test] Confirmed: actor booted with no sources (Standby mode)."
+else
+  echo "[smoke-test] WARNING: expected 'No boot-time sources' log line. Boot log:"
+  grep -E 'INFO|ERROR|sources' "$LOG_FILE" | head -10
+fi
+
 # initialize handshake
 call_mcp "initialize" '{
   "jsonrpc": "2.0", "id": 1, "method": "initialize",
-  "params": { "protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": { "name": "smoke-test", "version": "0.1.0" } }
+  "params": { "protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": { "name": "smoke-test", "version": "0.2.0" } }
 }'
 
 call_mcp "tools/list" '{
   "jsonrpc": "2.0", "id": 2, "method": "tools/list"
 }'
 
-call_mcp "tools/call → list_sources" '{
+# list_sources returns [] on a cold boot — confirms no crash with empty Map
+call_mcp "tools/call → list_sources (expect empty on cold boot)" '{
   "jsonrpc": "2.0", "id": 3, "method": "tools/call",
   "params": { "name": "list_sources", "arguments": {} }
 }'
 
-call_mcp "tools/call → get_toc (Next.js Docs)" '{
+# get_toc with sourceDef — triggers first index build (slow: real network call)
+echo
+echo "[smoke-test] get_toc with sourceDef (first call — triggers index build, will be slow)..."
+timed_call_mcp "tools/call → get_toc (Next.js Docs via sourceDef)" '{
   "jsonrpc": "2.0", "id": 4, "method": "tools/call",
-  "params": { "name": "get_toc", "arguments": { "source": "Next.js Docs" } }
+  "params": {
+    "name": "get_toc",
+    "arguments": {
+      "source": "Next.js Docs",
+      "sourceDef": { "name": "Next.js Docs", "template": "nextjs" }
+    }
+  }
+}'
+
+# second get_toc for same source — index already in Map, should be fast
+echo
+echo "[smoke-test] get_toc second call (index reuse — should be near-instant)..."
+timed_call_mcp "tools/call → get_toc (Next.js Docs — second call, reuse index)" '{
+  "jsonrpc": "2.0", "id": 5, "method": "tools/call",
+  "params": {
+    "name": "get_toc",
+    "arguments": {
+      "source": "Next.js Docs",
+      "sourceDef": { "name": "Next.js Docs", "template": "nextjs" }
+    }
+  }
 }'
 
 call_mcp "tools/call → search_docs (\"routing\")" '{
-  "jsonrpc": "2.0", "id": 5, "method": "tools/call",
-  "params": { "name": "search_docs", "arguments": { "query": "routing", "maxResults": 3 } }
+  "jsonrpc": "2.0", "id": 6, "method": "tools/call",
+  "params": {
+    "name": "search_docs",
+    "arguments": {
+      "query": "routing",
+      "source": "Next.js Docs",
+      "sourceDef": { "name": "Next.js Docs", "template": "nextjs" },
+      "maxResults": 3
+    }
+  }
 }'
 
-# get_page: pull a real URL out of the get_toc response so the test is data-driven
+# get_page: pull a real URL out of the get_toc response (index already built)
 FIRST_URL=$(curl -sS -X POST "http://localhost:${PORT}" \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc": "2.0", "id": 99, "method": "tools/call",
-    "params": { "name": "get_toc", "arguments": { "source": "Next.js Docs" } }
+    "params": {
+      "name": "get_toc",
+      "arguments": {
+        "source": "Next.js Docs",
+        "sourceDef": { "name": "Next.js Docs", "template": "nextjs" }
+      }
+    }
   }' \
   | (command -v jq >/dev/null 2>&1 \
       && jq -r '.result.content[0].text | fromjson | .pages[0].url // empty' \
       || true))
 
 if [[ -n "$FIRST_URL" ]]; then
-  call_mcp "tools/call → get_page ($FIRST_URL)" "$(printf '{
-    "jsonrpc": "2.0", "id": 6, "method": "tools/call",
+  echo
+  echo "[smoke-test] get_page first call (fresh fetch, cachedAt will be null)..."
+  timed_call_mcp "tools/call → get_page first fetch ($FIRST_URL)" "$(printf '{
+    "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+    "params": { "name": "get_page", "arguments": { "url": "%s" } }
+  }' "$FIRST_URL")"
+
+  echo
+  echo "[smoke-test] get_page second call (cache hit, cachedAt will be ISO timestamp)..."
+  timed_call_mcp "tools/call → get_page cache hit ($FIRST_URL)" "$(printf '{
+    "jsonrpc": "2.0", "id": 8, "method": "tools/call",
     "params": { "name": "get_page", "arguments": { "url": "%s" } }
   }' "$FIRST_URL")"
 else

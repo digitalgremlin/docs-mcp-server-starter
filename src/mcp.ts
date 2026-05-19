@@ -1,4 +1,5 @@
-import type { SourceIndex, CachedPage, SearchResult, FetchFn } from './types.js';
+import type { SourceIndex, CachedPage, SearchResult, FetchFn, SourceDef } from './types.js';
+import { buildSourceIndex } from './indexer.js';
 import type { LruCache } from './cache.js';
 import { extractContent } from './extractor.js';
 import { searchDocs } from './searcher.js';
@@ -18,10 +19,12 @@ interface McpResponse {
 }
 
 export interface ServerState {
-  sources: SourceIndex[];
+  sources: Map<string, SourceIndex>;
   cache: LruCache<string, CachedPage>;
   fetchFn: FetchFn;
   markdownOutput: boolean;
+  maxPagesPerSource: number;
+  buildLocks: Map<string, Promise<SourceIndex>>;
 }
 
 const TOOLS = [
@@ -125,44 +128,110 @@ function protocolError(id: McpRequest['id'], code: number, message: string): Mcp
   return { jsonrpc: '2.0', id, error: { code, message } };
 }
 
+// Ensures a source is indexed. Returns immediately if already in the Map.
+// Concurrent callers for the same unindexed source share one in-flight build
+// promise via buildLocks, preventing duplicate network fetches. The lock is
+// deleted on both resolve and reject so a failed build can be retried.
+async function ensureIndexed(state: ServerState, sourceDef: SourceDef): Promise<SourceIndex> {
+  const existing = state.sources.get(sourceDef.name);
+  if (existing) return existing;
+
+  const inflight = state.buildLocks.get(sourceDef.name);
+  if (inflight) return inflight;
+
+  const buildPromise = buildSourceIndex(sourceDef, state.fetchFn, state.maxPagesPerSource)
+    .then((index) => {
+      state.sources.set(index.name, index);
+      state.buildLocks.delete(index.name);
+      return index;
+    })
+    .catch((err: unknown) => {
+      state.buildLocks.delete(sourceDef.name);
+      throw err;
+    });
+
+  state.buildLocks.set(sourceDef.name, buildPromise);
+  return buildPromise;
+}
+
 async function dispatchTool(
   name: string,
   args: Record<string, unknown>,
   state: ServerState,
 ): Promise<unknown> {
+  const sourceDef = args['sourceDef'] as SourceDef | undefined;
+
   switch (name) {
     case 'list_sources':
       return {
-        sources: state.sources.map((s) => ({ name: s.name, url: s.url, pageCount: s.pages.length })),
+        sources: Array.from(state.sources.values()).map((s) => ({
+          name: s.name,
+          url: s.url,
+          pageCount: s.pages.length,
+        })),
       };
 
     case 'get_toc': {
-      const source = state.sources.find((s) => s.name === (args['source'] as string));
-      if (!source) return { error: `Source not found: "${args['source'] as string}"` };
+      const sourceName = args['source'] as string;
+      if (sourceDef) {
+        try {
+          await ensureIndexed(state, sourceDef);
+        } catch (e) {
+          return { error: `Failed to build index for "${sourceDef.name}": ${e instanceof Error ? e.message : String(e)}` };
+        }
+      }
+      const source = state.sources.get(sourceName);
+      if (!source) {
+        return {
+          error: `Source not indexed: "${sourceName}". Pass sourceDef to index it on demand.`,
+        };
+      }
       return { source: source.name, pages: source.pages };
     }
 
     case 'search_docs': {
       const query = args['query'] as string;
       if (query.length > 500) return { error: 'query must be <= 500 characters' };
+      if (sourceDef) {
+        try {
+          await ensureIndexed(state, sourceDef);
+        } catch (e) {
+          return { error: `Failed to build index for "${sourceDef.name}": ${e instanceof Error ? e.message : String(e)}` };
+        }
+      }
       const sourceFilter = typeof args['source'] === 'string' ? args['source'] : undefined;
       const maxResults = Math.min(
         typeof args['maxResults'] === 'number' ? Math.max(1, Math.floor(args['maxResults'])) : 10,
         30,
       );
-      const results: SearchResult[] = searchDocs(query, state.sources, state.cache, { maxResults, sourceFilter });
+      const results: SearchResult[] = searchDocs(
+        query,
+        Array.from(state.sources.values()),
+        state.cache,
+        { maxResults, sourceFilter },
+      );
       return { query, source: sourceFilter ?? null, results };
     }
 
     case 'get_page': {
       const url = args['url'] as string;
 
+      if (sourceDef) {
+        try {
+          await ensureIndexed(state, sourceDef);
+        } catch (e) {
+          return { error: `Failed to build index for "${sourceDef.name}": ${e instanceof Error ? e.message : String(e)}` };
+        }
+      }
+
       const cached = state.cache.get(url);
       if (cached) {
         return { url: cached.url, title: cached.title, source: cached.source, content: cached.content, cachedAt: cached.cachedAt };
       }
 
-      const sourceIndex = state.sources.find((s) => s.pages.some((p) => p.url === url));
+      const sourceIndex = Array.from(state.sources.values()).find((s) =>
+        s.pages.some((p) => p.url === url),
+      );
       if (!sourceIndex) return { error: 'URL not found in any configured source index' };
 
       const page = sourceIndex.pages.find((p) => p.url === url)!;

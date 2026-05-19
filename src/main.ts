@@ -1,7 +1,7 @@
 import { Actor, log } from 'apify';
 import http from 'node:http';
 import type { ActorInput, CachedPage, FetchFn } from './types.js';
-import { buildAllIndexes } from './indexer.js';
+import { buildSourceIndex } from './indexer.js';
 import { LruCache } from './cache.js';
 import { handleMcpRequest, type ServerState } from './mcp.js';
 
@@ -13,11 +13,11 @@ async function fetchUrl(url: string): Promise<{ html: string; ok: boolean; statu
   return { html, ok: response.ok, status: response.status };
 }
 
-function validateInput(raw: unknown): ActorInput {
-  const input = raw as ActorInput | null;
-  if (!input?.sources?.length) throw new Error('Input must include at least one source.');
-  if (input.sources.length > 10) throw new Error('sources: maximum 10 allowed.');
-  for (const src of input.sources) {
+function validateInput(raw: unknown): Required<ActorInput> {
+  const input = (raw ?? {}) as ActorInput;
+  const sources = input.sources ?? [];
+  if (sources.length > 10) throw new Error('sources: maximum 10 allowed.');
+  for (const src of sources) {
     if (!src.name) throw new Error('Each source must have a name.');
     if (!src.template && (!src.url || !src.contentSelector)) {
       throw new Error(`Source "${src.name}": requires template OR (url + contentSelector).`);
@@ -27,7 +27,7 @@ function validateInput(raw: unknown): ActorInput {
   const cacheMaxPages = input.cacheMaxPages ?? 50;
   if (maxPagesPerSource < 1 || maxPagesPerSource > 500) throw new Error('maxPagesPerSource must be 1–500.');
   if (cacheMaxPages < 1 || cacheMaxPages > 200) throw new Error('cacheMaxPages must be 1–200.');
-  return { ...input, maxPagesPerSource, cacheMaxPages, markdownOutput: input.markdownOutput ?? true };
+  return { sources, maxPagesPerSource, cacheMaxPages, markdownOutput: input.markdownOutput ?? true };
 }
 
 await Actor.init();
@@ -36,14 +36,30 @@ try {
   const raw = await Actor.getInput();
   const input = validateInput(raw);
 
-  log.info('Building source indexes…', { sources: input.sources.map((s) => s.name) });
   const fetchFn: FetchFn = fetchUrl;
-  const sources = await buildAllIndexes(input.sources, fetchFn, input.maxPagesPerSource!);
-  const totalPages = sources.reduce((n, s) => n + s.pages.length, 0);
-  log.info('Indexes ready.', { totalPages, sourceCount: sources.length });
+  const sourceMap = new Map<string, import('./types.js').SourceIndex>();
 
-  const cache = new LruCache<string, CachedPage>(input.cacheMaxPages!);
-  const state: ServerState = { sources, cache, fetchFn, markdownOutput: input.markdownOutput! };
+  if (input.sources.length > 0) {
+    log.info('Pre-building source indexes…', { sources: input.sources.map((s) => s.name) });
+    const built = await Promise.all(
+      input.sources.map((s) => buildSourceIndex(s, fetchFn, input.maxPagesPerSource)),
+    );
+    for (const idx of built) sourceMap.set(idx.name, idx);
+    const totalPages = built.reduce((n, s) => n + s.pages.length, 0);
+    log.info('Indexes ready.', { totalPages, sourceCount: built.length });
+  } else {
+    log.info('No boot-time sources. Standby mode: indexes built on first tool call.');
+  }
+
+  const cache = new LruCache<string, CachedPage>(input.cacheMaxPages);
+  const state: ServerState = {
+    sources: sourceMap,
+    cache,
+    fetchFn,
+    markdownOutput: input.markdownOutput,
+    maxPagesPerSource: input.maxPagesPerSource,
+    buildLocks: new Map(),
+  };
 
   const port = parseInt(process.env['ACTOR_STANDBY_PORT'] ?? '4321', 10);
 
