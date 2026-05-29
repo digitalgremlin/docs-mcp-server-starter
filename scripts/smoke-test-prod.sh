@@ -47,9 +47,12 @@ call() {
 }
 
 timed_call() {
+  # Human output (header, pretty body, timing) goes to stderr so callers can
+  # capture the raw JSON response from stdout — or discard stdout with
+  # `> /dev/null` without also suppressing the timing line.
   local label="$1" payload="$2"
-  echo
-  echo "── $label ──"
+  echo >&2
+  echo "── $label ──" >&2
   local start end elapsed response
   start=$(date +%s%3N)
   if [[ -n "$AUTH_HEADER" ]]; then
@@ -64,8 +67,8 @@ timed_call() {
   fi
   end=$(date +%s%3N)
   elapsed=$(( end - start ))
-  echo "$response" | pretty
-  echo "[smoke-test-prod] Response time: ${elapsed}ms"
+  echo "$response" | pretty >&2
+  echo "[smoke-test-prod] Response time: ${elapsed}ms" >&2
   echo "$response"
 }
 
