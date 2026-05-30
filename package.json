@@ -24,7 +24,8 @@
     "start:dev": "tsx src/main.ts",
     "build": "tsc",
     "test": "vitest run",
-    "lint:types": "tsc --noEmit"
+    "lint:types": "tsc --noEmit",
+    "demo:gif": "vhs demo/demo.tape"
   },
   "author": "Joe Slade",
   "license": "Apache-2.0"
