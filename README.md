@@ -4,9 +4,7 @@ Give Claude, Cursor, and any MCP-compatible AI assistant queryable access to up-
 
 Ships with five ready-to-use templates (Next.js, Tailwind CSS, React, TypeScript, Prisma). Fork it for any docs site by supplying a URL and a CSS content selector — no code changes required.
 
-![Docs MCP Server Starter demo — get_toc, search_docs, and get_page running against a local Standby server](demo/demo.gif)
-
-> Recorded with [VHS](https://github.com/charmbracelet/vhs) — see [`demo/`](demo/) to re-render.
+![Docs MCP Server Starter demo — get_toc, search_docs, and get_page running against a local Standby server](https://joeslade.com/wp-content/uploads/2026/05/demo.gif)
 
 ## Who is this for?
 

@@ -3,11 +3,16 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Persistent MCP server that gives Claude, Cursor, and any MCP-compatible AI assistant queryable access to technical documentation. Ships with templates for Next.js, Tailwind CSS, React, TypeScript, and Prisma.",
-  "engines": { "node": ">=18.0.0" },
+  "engines": { "node": ">=20.0.0" },
   "dependencies": {
     "apify": "^3.7.0",
     "cheerio": "^1.0.0",
     "turndown": "^7.2.0"
+  },
+  "overrides": {
+    "axios": "^1.16.1",
+    "file-type": "^21.3.4",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@apify/eslint-config": "^1.0.0",
@@ -24,8 +29,7 @@
     "start:dev": "tsx src/main.ts",
     "build": "tsc",
     "test": "vitest run",
-    "lint:types": "tsc --noEmit",
-    "demo:gif": "vhs demo/demo.tape"
+    "lint:types": "tsc --noEmit"
   },
   "author": "Joe Slade",
   "license": "Apache-2.0"
