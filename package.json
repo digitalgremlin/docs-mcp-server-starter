@@ -1,6 +1,6 @@
 {
   "name": "docs-mcp-server-starter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Persistent MCP server that gives Claude, Cursor, and any MCP-compatible AI assistant queryable access to technical documentation. Ships with templates for Next.js, Tailwind CSS, React, TypeScript, and Prisma.",
   "engines": { "node": ">=20.0.0" },
