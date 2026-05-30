@@ -22,8 +22,8 @@ Set TypingSpeed 55ms
 Hide
   Type "cd $(git rev-parse --show-toplevel) && clear" Enter
   # Boot Standby in the background, capture logs, wait for the server.
-  Type "LOG=$(mktemp); apify run --purge >\"$LOG\" 2>&1 & APID=$!" Enter
-  Type "until grep -q 'MCP server listening' \"$LOG\"; do sleep 1; done" Enter
+  Type `LOG=$(mktemp); apify run --purge >$LOG 2>&1 & APID=$!` Enter
+  Type `until grep -q "MCP server listening" $LOG; do sleep 1; done` Enter
   # Warm the Next.js index + page cache so search returns content hits.
   Type "./demo/mcp.sh warm 8 >/dev/null" Enter
   Type "clear" Enter
@@ -47,7 +47,7 @@ Sleep 3s
 Type "# 3. Fetch a full page (LRU cache hit -> cachedAt is set)"
 Enter
 Sleep 600ms
-Type "./demo/mcp.sh page \"$(./demo/mcp.sh first-url)\""
+Type `./demo/mcp.sh page "$(./demo/mcp.sh first-url)"`
 Enter
 Sleep 3.5s
 
@@ -57,5 +57,5 @@ Sleep 2.5s
 
 # ── Teardown (not recorded) ───────────────────────────────────────────
 Hide
-  Type "kill -TERM \"$APID\" 2>/dev/null; wait \"$APID\" 2>/dev/null; rm -f \"$LOG\"" Enter
+  Type `kill -TERM $APID 2>/dev/null; wait $APID 2>/dev/null; rm -f $LOG` Enter
 Show
