@@ -73,6 +73,42 @@ Ships with five ready-to-use templates (Next.js, Tailwind CSS, React, TypeScript
               "arguments": { "url": "https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions" } } }
 ```
 
+### Example tool output
+
+Each tool returns JSON inside the standard MCP `result.content[].text` envelope. The inner payloads look like this:
+
+`search_docs` →
+
+```json
+{
+  "query": "server actions",
+  "source": "Next.js Docs",
+  "results": [
+    {
+      "title": "Server Actions and Mutations",
+      "url": "https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions",
+      "source": "Next.js Docs",
+      "snippet": "Server Actions are asynchronous functions executed on the server…",
+      "matchType": "content"
+    }
+  ]
+}
+```
+
+`get_page` → page content as markdown (or raw text when `markdownOutput` is `false`):
+
+```json
+{
+  "url": "https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions",
+  "title": "Server Actions and Mutations",
+  "source": "Next.js Docs",
+  "content": "# Server Actions and Mutations\n\nServer Actions are asynchronous functions…",
+  "cachedAt": "2026-05-30T12:00:00.000Z"
+}
+```
+
+`list_sources` → `{ "sources": [{ "name": "Next.js Docs", "url": "https://nextjs.org/docs", "pageCount": 200 }] }`
+
 ## How it works
 
 1. **Boot:** `Actor.init()`, validate input, resolve any curated templates
@@ -84,6 +120,18 @@ Ships with five ready-to-use templates (Next.js, Tailwind CSS, React, TypeScript
 ## Running on Apify
 
 This actor runs in **Standby mode** — a persistent HTTP server, not a batch job. Connect an MCP client to the Standby URL exposed by Apify after deploy. The server starts after indexing completes; check the run logs for `MCP server listening.` before sending requests.
+
+Running on Apify also means the platform's advantages come for free: **scheduling** to re-index on a cadence, **monitoring and alerts** on the server's health, **API access** to every run, and **integrations** with the rest of your stack — none of which you'd get from a docs server you host yourself.
+
+## Pricing
+
+This Actor runs in Standby mode, so it bills for the Apify **compute time the server is active** — there's no per-result charge. Because Standby **scales to zero when idle**, you pay only while it's actually serving MCP requests (plus a short keep-warm window), not around the clock.
+
+- **Indexing happens once at boot**, then queries are answered from the in-memory page index and the LRU cache — so steady-state cost stays low even under frequent use.
+- **Lower `maxPagesPerSource`** for faster, cheaper boots on large docs sites; **raise `cacheMaxPages`** if you query the same pages repeatedly.
+- Try it on the **Apify free tier** to see real compute usage for your sources before committing to a plan.
+
+See the **Pricing** section on the Actor's detail page for current rates.
 
 ## Connect your AI assistant
 
@@ -147,6 +195,14 @@ npm install
 npm test            # pipeline, cache, indexer, extractor, mcp, searcher, sitemap suites
 apify run           # local Standby — server listens on ACTOR_STANDBY_PORT or 4321
 ```
+
+## Other Actors in this collection
+
+Part of a small suite of focused, composable dev-tool Actors — same philosophy: do one thing, stay testable, wire into a pipeline.
+
+- **[GitHub Repo Intelligence MCP](https://apify.com/joeslade/github-repo-intelligence-mcp)** — an MCP server that gives your AI agent an opinionated verdict on whether a GitHub repo is actively maintained or abandoned.
+- **[Changelog Triage Agent](https://apify.com/joeslade/changelog-triage-agent)** — monitors product changelogs and classifies every entry as BREAKING, WARNING, or INFO so you catch deprecations early.
+- **[SERP Topic Gap Monitor](https://apify.com/joeslade/serp-topic-gap-monitor)** — finds the topics your competitors rank for that your site is missing.
 
 ## License
 
