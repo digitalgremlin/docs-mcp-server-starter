@@ -1,10 +1,8 @@
-# Docs MCP Server Starter
-
 Give Claude, Cursor, and any MCP-compatible AI assistant queryable access to up-to-date technical documentation. This Apify Actor runs a persistent MCP server that indexes docs sites, exposes search and fetch tools over the Model Context Protocol, and caches pages for fast follow-up queries.
 
 Ships with five ready-to-use templates (Next.js, Tailwind CSS, React, TypeScript, Prisma). Fork it for any docs site by supplying a URL and a CSS content selector — no code changes required.
 
-![Docs MCP Server Starter demo — get_toc, search_docs, and get_page running against a local Standby server](https://joeslade.com/wp-content/uploads/2026/05/demo.gif)
+![Docs MCP Server Starter demo — get_toc, search_docs, and get_page running against a local Standby server](https://raw.githubusercontent.com/digitalgremlin/docs-mcp-server-starter/main/.demo/docs-mcp-server-starter-demo.gif)
 
 ## Who is this for?
 

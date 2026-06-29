@@ -5,6 +5,7 @@
   "title": "Docs MCP Server Starter",
   "description": "Persistent MCP server that gives Claude, Cursor, and any MCP-compatible AI assistant queryable access to technical documentation. Indexes any docs site, exposes search and fetch tools over JSON-RPC, caches pages for speed. Ships with templates for Next.js, Tailwind, React, TypeScript, Prisma.",
   "input": "./input_schema.json",
+  "output": "./output_schema.json",
   "version": "0.2",
   "buildTag": "latest",
   "meta": {

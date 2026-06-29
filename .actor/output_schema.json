@@ -1,0 +1,7 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "Docs MCP Server Starter output",
+  "description": "This Actor runs as a persistent MCP server. It produces no run dataset or key-value store output — AI assistants (Claude, Cursor, any MCP client) interact with it over the MCP protocol (JSON-RPC) via its search and fetch tools. An empty output schema signals that a run completed successfully with no stored output, rather than appearing to have failed.",
+  "type": "object",
+  "properties": {}
+}
