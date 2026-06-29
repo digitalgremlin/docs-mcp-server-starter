@@ -8,6 +8,8 @@
   "output": "./output_schema.json",
   "version": "0.2",
   "buildTag": "latest",
+  "usesStandbyMode": true,
+  "webServerMcpPath": "/mcp",
   "meta": {
     "templateId": "ts-empty",
     "generatedBy": "Claude Code with Claude Sonnet 4.6"
