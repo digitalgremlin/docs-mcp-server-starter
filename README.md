@@ -2,7 +2,7 @@ Give Claude, Cursor, and any MCP-compatible AI assistant queryable access to up-
 
 Ships with five ready-to-use templates (Next.js, Tailwind CSS, React, TypeScript, Prisma). Fork it for any docs site by supplying a URL and a CSS content selector — no code changes required.
 
-![Docs MCP Server Starter demo — get_toc, search_docs, and get_page running against a local Standby server](https://raw.githubusercontent.com/digitalgremlin/docs-mcp-server-starter/main/.demo/docs-mcp-server-starter-demo.gif)
+![Docs MCP Server Starter demo — get_toc, search_docs, and get_page over MCP against the live Standby server](https://raw.githubusercontent.com/digitalgremlin/digitalgremlin/main/apify-actor-demos/docs-mcp-server-starter-demo.gif)
 
 ## Who is this for?
 
